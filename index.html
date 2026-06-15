@@ -29,7 +29,7 @@
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
                         <i class="fa-solid fa-link"></i>
                     </span>
-                    <input type="text" id="urlInput" placeholder="Cole o link aqui..." 
+                    <input type="text" id="urlInput" placeholder="Cole o link do YouTube aqui..." 
                            class="w-full bg-slate-900/60 border border-slate-700 p-3 pl-10 rounded-xl outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition placeholder-gray-500 text-sm">
                 </div>
             </div>
@@ -89,7 +89,6 @@
                 return;
             }
 
-            // Interface em estado de carregamento
             btn.disabled = true;
             btn.classList.add('opacity-50', 'cursor-not-allowed');
             statusContainer.classList.remove('hidden');
@@ -97,7 +96,8 @@
             status.innerText = `Fazendo o download do ${formatoSelecionado === 'mp4' ? 'vídeo' : 'áudio'}... Isso pode levar um minuto.`;
 
             try {
-                const response = await fetch('http://localhost:5000/download', {
+                // A mágica acontece aqui: usando a rota relativa '/download'
+                const response = await fetch('/download', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url: url, format: formatoSelecionado })
@@ -108,7 +108,6 @@
                     throw new Error(errData.erro || "Erro ao processar arquivo no servidor.");
                 }
 
-                // Captura o nome original enviado pelo Flask via header customizado
                 const disposition = response.headers.get('Content-Disposition');
                 let filename = formatoSelecionado === 'mp4' ? "video.mp4" : "audio.mp3"; 
 
