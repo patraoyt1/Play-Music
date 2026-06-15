@@ -3,58 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Downloader</title>
+    <title>Video & Audio Downloader Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+        [x-cloak] { display: none !important; }
+    </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4">
+<body class="min-h-screen flex items-center justify-center p-4">
 
-    <div class="bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-700">
-        <h1 class="text-2xl font-bold mb-6 text-center text-blue-400">Audio Downloader</h1>
+    <div class="bg-slate-800/80 backdrop-blur-md p-8 rounded-2xl shadow-2xl w-full max-w-md border border-slate-700/50">
+        <div class="text-center mb-6">
+            <div class="inline-flex p-3 bg-blue-600/10 rounded-xl text-blue-400 mb-3 border border-blue-500/20">
+                <i class="fa-solid fa-cloud-arrow-down text-2xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white tracking-wide">Media Downloader</h1>
+            <p class="text-xs text-gray-400 mt-1">Baixe vídeos e áudios instantaneamente</p>
+        </div>
         
-        <input type="text" id="urlInput" placeholder="Cole a URL do vídeo aqui..." 
-               class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg mb-4 outline-none focus:border-blue-500">
-        
-        <button id="btnDownload" onclick="baixarAudio()"
-                class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-lg font-bold transition">
-            Baixar MP3
-        </button>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">URL do Conteúdo</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                        <i class="fa-solid fa-link"></i>
+                    </span>
+                    <input type="text" id="urlInput" placeholder="Cole o link do YouTube aqui..." 
+                           class="w-full bg-slate-900/60 border border-slate-700 p-3 pl-10 rounded-xl outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition placeholder-gray-500 text-sm">
+                </div>
+            </div>
 
-        <div id="status" class="mt-4 text-sm text-center font-medium"></div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Formato de Saída</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="btnFormatMp4" onclick="setFormato('mp4')" class="flex items-center justify-center gap-2 py-2.5 rounded-xl border font-medium text-sm transition bg-blue-600/20 border-blue-500 text-blue-400">
+                        <i class="fa-solid fa-video"></i> Vídeo (MP4)
+                    </button>
+                    <button id="btnFormatMp3" onclick="setFormato('mp3')" class="flex items-center justify-center gap-2 py-2.5 rounded-xl border font-medium text-sm transition bg-slate-900 border-slate-700 text-gray-400 hover:border-slate-600">
+                        <i class="fa-solid fa-music"></i> Áudio (MP3)
+                    </button>
+                </div>
+            </div>
+            
+            <button id="btnDownload" onclick="processarDownload()"
+                    class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[0.98] py-3.5 rounded-xl font-bold text-sm tracking-wide transition shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 mt-2">
+                <i class="fa-solid fa-download"></i> <span id="btnText">Iniciar Download</span>
+            </button>
+        </div>
+
+        <div id="statusContainer" class="hidden mt-5 pt-4 border-t border-slate-700/50 text-center animate-fadeIn">
+            <div id="spinner" class="inline-block animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent mb-2"></div>
+            <div id="status" class="text-xs font-medium text-gray-300">Processando requisição...</div>
+        </div>
     </div>
 
     <script>
-        async function baixarAudio() {
-            const url = document.getElementById('urlInput').value;
-            const status = document.getElementById('status');
-            const btn = document.getElementById('btnDownload');
+        let formatoSelecionado = 'mp4';
 
+        function setFormato(formato) {
+            formatoSelecionado = formato;
+            const btnMp4 = document.getElementById('btnFormatMp4');
+            const btnMp3 = document.getElementById('btnFormatMp3');
+
+            if (formato === 'mp4') {
+                btnMp4.className = "flex items-center justify-center gap-2 py-2.5 rounded-xl border font-medium text-sm transition bg-blue-600/20 border-blue-500 text-blue-400";
+                btnMp3.className = "flex items-center justify-center gap-2 py-2.5 rounded-xl border font-medium text-sm transition bg-slate-900 border-slate-700 text-gray-400 hover:border-slate-600";
+            } else {
+                btnMp3.className = "flex items-center justify-center gap-2 py-2.5 rounded-xl border font-medium text-sm transition bg-blue-600/20 border-blue-500 text-blue-400";
+                btnMp4.className = "flex items-center justify-center gap-2 py-2.5 rounded-xl border font-medium text-sm transition bg-slate-900 border-slate-700 text-gray-400 hover:border-slate-600";
+            }
+        }
+
+        async function processarDownload() {
+            const urlInput = document.getElementById('urlInput');
+            const btn = document.getElementById('btnDownload');
+            const btnText = document.getElementById('btnText');
+            const statusContainer = document.getElementById('statusContainer');
+            const status = document.getElementById('status');
+            const spinner = document.getElementById('spinner');
+
+            const url = urlInput.value.trim();
             if (!url) {
-                status.innerText = "Por favor, insira uma URL.";
+                alert("Por favor, cole uma URL válida.");
                 return;
             }
 
-            status.innerText = "Processando... aguarde.";
+            // Interface em estado de carregamento
             btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            statusContainer.classList.remove('hidden');
+            spinner.classList.remove('hidden');
+            status.innerText = `Fazendo o download do ${formatoSelecionado === 'mp4' ? 'vídeo' : 'áudio'}... Isso pode levar um minuto.`;
 
             try {
                 const response = await fetch('http://localhost:5000/download', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: url })
+                    body: JSON.stringify({ url: url, format: formatoSelecionado })
                 });
 
-                if (!response.ok) throw new Error("Erro ao baixar o vídeo");
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.erro || "Erro ao processar arquivo no servidor.");
+                }
 
-                // Captura o nome original do arquivo via cabeçalho
+                // Captura o nome original enviado pelo Flask via header customizado
                 const disposition = response.headers.get('Content-Disposition');
-                let filename = "audio.mp3"; 
+                let filename = formatoSelecionado === 'mp4' ? "video.mp4" : "audio.mp3"; 
 
                 if (disposition && disposition.includes('filename*=UTF-8')) {
                     const encodedName = disposition.split("filename*=UTF-8''")[1];
                     filename = decodeURIComponent(encodedName);
                 }
 
-                // Cria o blob e dispara o download
                 const blob = await response.blob();
                 const downloadUrl = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -64,11 +126,14 @@
                 a.click();
                 a.remove();
                 
-                status.innerText = "Download concluído!";
+                spinner.classList.add('hidden');
+                status.innerHTML = "<span class='text-green-400 font-bold'><i class='fa-solid fa-circle-check'></i> Concluído com sucesso!</span>";
             } catch (error) {
-                status.innerText = "Erro: " + error.message;
+                spinner.classList.add('hidden');
+                status.innerHTML = `<span class='text-red-400 font-bold'><i class='fa-solid fa-circle-xmark'></i> Erro: ${error.message}</span>`;
             } finally {
                 btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         }
     </script>
