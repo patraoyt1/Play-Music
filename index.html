@@ -3,138 +3,438 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video & Audio Downloader Pro</title>
+    <title>AudioX Folder Player v2.0</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; }
         [x-cloak] { display: none !important; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 2px; }
     </style>
-</head>
-<body class="min-h-screen flex items-center justify-center p-4">
-
-    <div class="bg-slate-800/80 backdrop-blur-md p-8 rounded-2xl shadow-2xl w-full max-w-md border border-slate-700/50">
-        <div class="text-center mb-6">
-            <div class="inline-flex p-3 bg-blue-600/10 rounded-xl text-blue-400 mb-3 border border-blue-500/20">
-                <i class="fa-solid fa-cloud-arrow-down text-2xl"></i>
-            </div>
-            <h1 class="text-2xl font-bold text-white tracking-wide">Media Downloader</h1>
-            <p class="text-xs text-gray-400 mt-1">Baixe vídeos e áudios instantaneamente</p>
-        </div>
-        
-        <div class="space-y-4">
-            <div>
-                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">URL do Conteúdo</label>
-                <div class="relative">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
-                        <i class="fa-solid fa-link"></i>
-                    </span>
-                    <input type="text" id="urlInput" placeholder="Cole o link do YouTube aqui..." 
-                           class="w-full bg-slate-900/60 border border-slate-700 p-3 pl-10 rounded-xl outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition placeholder-gray-500 text-sm">
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Formato de Saída</label>
-                <div class="grid grid-cols-2 gap-3">
-                    <button id="btnFormatMp4" onclick="setFormato('mp4')" class="flex items-center justify-center gap-2 py-2.5 rounded-xl border font-medium text-sm transition bg-blue-600/20 border-blue-500 text-blue-400">
-                        <i class="fa-solid fa-video"></i> Vídeo (MP4)
-                    </button>
-                    <button id="btnFormatMp3" onclick="setFormato('mp3')" class="flex items-center justify-center gap-2 py-2.5 rounded-xl border font-medium text-sm transition bg-slate-900 border-slate-700 text-gray-400 hover:border-slate-600">
-                        <i class="fa-solid fa-music"></i> Áudio (MP3)
-                    </button>
-                </div>
-            </div>
-            
-            <button id="btnDownload" onclick="processarDownload()"
-                    class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[0.98] py-3.5 rounded-xl font-bold text-sm tracking-wide transition shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 mt-2">
-                <i class="fa-solid fa-download"></i> <span id="btnText">Iniciar Download</span>
-            </button>
-        </div>
-
-        <div id="statusContainer" class="hidden mt-5 pt-4 border-t border-slate-700/50 text-center animate-fadeIn">
-            <div id="spinner" class="inline-block animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent mb-2"></div>
-            <div id="status" class="text-xs font-medium text-gray-300">Processando requisição...</div>
-        </div>
-    </div>
 
     <script>
-        let formatoSelecionado = 'mp4';
-
-        function setFormato(formato) {
-            formatoSelecionado = formato;
-            const btnMp4 = document.getElementById('btnFormatMp4');
-            const btnMp3 = document.getElementById('btnFormatMp3');
-
-            if (formato === 'mp4') {
-                btnMp4.className = "flex items-center justify-center gap-2 py-2.5 rounded-xl border font-medium text-sm transition bg-blue-600/20 border-blue-500 text-blue-400";
-                btnMp3.className = "flex items-center justify-center gap-2 py-2.5 rounded-xl border font-medium text-sm transition bg-slate-900 border-slate-700 text-gray-400 hover:border-slate-600";
-            } else {
-                btnMp3.className = "flex items-center justify-center gap-2 py-2.5 rounded-xl border font-medium text-sm transition bg-blue-600/20 border-blue-500 text-blue-400";
-                btnMp4.className = "flex items-center justify-center gap-2 py-2.5 rounded-xl border font-medium text-sm transition bg-slate-900 border-slate-700 text-gray-400 hover:border-slate-600";
-            }
-        }
-
-        async function processarDownload() {
-            const urlInput = document.getElementById('urlInput');
-            const btn = document.getElementById('btnDownload');
-            const btnText = document.getElementById('btnText');
-            const statusContainer = document.getElementById('statusContainer');
-            const status = document.getElementById('status');
-            const spinner = document.getElementById('spinner');
-
-            const url = urlInput.value.trim();
-            if (!url) {
-                alert("Por favor, cole uma URL válida.");
-                return;
-            }
-
-            btn.disabled = true;
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
-            statusContainer.classList.remove('hidden');
-            spinner.classList.remove('hidden');
-            status.innerText = `Fazendo o download do ${formatoSelecionado === 'mp4' ? 'vídeo' : 'áudio'}... Isso pode levar um minuto.`;
-
-            try {
-                // A mágica acontece aqui: usando a rota relativa '/download'
-                const response = await fetch('/download', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: url, format: formatoSelecionado })
-                });
-
-                if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.erro || "Erro ao processar arquivo no servidor.");
-                }
-
-                const disposition = response.headers.get('Content-Disposition');
-                let filename = formatoSelecionado === 'mp4' ? "video.mp4" : "audio.mp3"; 
-
-                if (disposition && disposition.includes('filename*=UTF-8')) {
-                    const encodedName = disposition.split("filename*=UTF-8''")[1];
-                    filename = decodeURIComponent(encodedName);
-                }
-
-                const blob = await response.blob();
-                const downloadUrl = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-                a.download = filename; 
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
+        function app() {
+            return {
+                tabAtual: 'player', 
+                audio: null,
                 
-                spinner.classList.add('hidden');
-                status.innerHTML = "<span class='text-green-400 font-bold'><i class='fa-solid fa-circle-check'></i> Concluído com sucesso!</span>";
-            } catch (error) {
-                spinner.classList.add('hidden');
-                status.innerHTML = `<span class='text-red-400 font-bold'><i class='fa-solid fa-circle-xmark'></i> Erro: ${error.message}</span>`;
-            } finally {
-                btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                // Variáveis da Web Audio API (Equalizador Real)
+                audioContext: null,
+                analyser: null,
+                dataArray: null,
+                source: null,
+                
+                // Altura em porcentagem de cada uma das 7 barras
+                barHeights: [10, 10, 10, 10, 10, 10, 10],
+                
+                // Estados do Player
+                isPlaying: false,
+                currentTime: 0,
+                duration: 0,
+                volume: 0.8,
+                isMuted: false,
+                isShuffle: false,
+                isLoop: false,
+                
+                // Biblioteca Dinâmica Carregada da Pasta do PC
+                biblioteca: [],
+                
+                // Playlists e Estados de Organização
+                playlists: [],
+                playlistAtiva: null, 
+                musicaAtualIdx: 0,
+                novaPlaylistNome: '',
+                
+                iniciar() {
+                    this.audio = new Audio();
+                    this.audio.crossOrigin = "anonymous"; // Evita problemas de segurança com áudio
+                    this.audio.volume = this.volume;
+
+                    // Recupera playlists do LocalStorage
+                    const salvas = localStorage.getItem('audiox-folder-playlists');
+                    if (salvas) {
+                        this.playlists = JSON.parse(salvas);
+                    } else {
+                        this.playlists = [{ id: 'fav', nome: 'Minhas Favoritas', icon: 'fa-heart', musicasIds: [] }];
+                        this.salvarNoNavegador();
+                    }
+
+                    // Ouvintes de Eventos do Áudio
+                    this.audio.addEventListener('timeupdate', () => { this.currentTime = this.audio.currentTime; });
+                    this.audio.addEventListener('loadedmetadata', () => { this.duration = this.audio.duration; });
+                    this.audio.addEventListener('ended', () => { this.proximaMusica(true); });
+                },
+
+                // --- INICIALIZADOR DO EQUALIZADOR REAL ---
+                setupAudioContext() {
+                    // O navegador exige uma interação do usuário (como dar Play) para liberar o áudio do sistema
+                    if (!this.audioContext) {
+                        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        this.analyser = this.audioContext.createAnalyser();
+                        
+                        // Conecta o elemento de áudio ao analisador e à saída de som do PC
+                        this.source = this.audioContext.createMediaElementSource(this.audio);
+                        this.source.connect(this.analyser);
+                        this.analyser.connect(this.audioContext.destination);
+                        
+                        // Configurações de sensibilidade do gráfico
+                        this.analyser.fftSize = 64; // Quantidade de subdivisões de frequência
+                        const bufferLength = this.analyser.frequencyBinCount;
+                        this.dataArray = new Uint8Array(bufferLength);
+                        
+                        // Inicia o loop de renderização do gráfico
+                        this.renderEqualizer();
+                    }
+                },
+
+                renderEqualizer() {
+                    if (!this.isPlaying) {
+                        // Se estiver pausado, vai baixando as barras suavemente até o zero
+                        this.barHeights = this.barHeights.map(h => Math.max(10, h - 4));
+                        requestAnimationFrame(() => this.renderEqualizer());
+                        return;
+                    }
+
+                    // Puxa os dados reais de frequência do arquivo tocando agora
+                    this.analyser.getByteFrequencyData(this.dataArray);
+                    
+                    // Mapeia os dados brutos da API (0 a 255) em porcentagem de altura (10% a 100%)
+                    // Selecionamos frequências espaçadas para preencher as 7 barras (Graves nos primeiros índices, Agudos nos últimos)
+                    const indicesIndices = [2, 4, 6, 9, 12, 15, 19]; 
+                    
+                    this.barHeights = indicesIndices.map(idx => {
+                        const valorBruto = this.dataArray[idx] || 0;
+                        const porcentagem = (valorBruto / 255) * 100;
+                        return Math.max(10, porcentagem); // Garante altura mínima de 10% para não sumir
+                    });
+
+                    // Chama a função novamente no próximo frame da tela (60 FPS)
+                    requestAnimationFrame(() => this.renderEqualizer());
+                },
+
+                // --- FUNÇÃO CORE: IMPORTAR PASTA LOCAL ---
+                async selecionarPasta() {
+                    try {
+                        const dirHandle = await window.showDirectoryPicker();
+                        this.biblioteca = [];
+                        let idCounter = 1;
+
+                        for await (const entry of dirHandle.values()) {
+                            if (entry.kind === 'file' && /\.(mp3|wav|m4a|ogg)$/i.test(entry.name)) {
+                                const file = await entry.getFile();
+                                const blobUrl = URL.createObjectURL(file);
+                                const nomeLimpo = entry.name.replace(/\.[^/.]+$/, "");
+
+                                this.biblioteca.push({
+                                    id: idCounter.toString(),
+                                    titulo: nomeLimpo,
+                                    artista: "Arquivo Local",
+                                    album: "Sua Pasta",
+                                    url: blobUrl
+                                });
+                                idCounter++;
+                            }
+                        }
+
+                        if (this.biblioteca.length > 0) {
+                            this.musicaAtualIdx = 0;
+                            this.carregarMusica();
+                        } else {
+                            alert("Nenhum arquivo de áudio compatível foi encontrado na pasta selecionada.");
+                        }
+
+                    } catch (err) {
+                        console.error("Acesso à pasta cancelado ou não suportado:", err);
+                    }
+                },
+
+                // Getters de Filtragem
+                get listaAtual() {
+                    if (!this.playlistAtiva) return this.biblioteca;
+                    const pl = this.playlists.find(p => p.id === this.playlistAtiva);
+                    if (!pl) return this.biblioteca;
+                    return this.biblioteca.filter(m => pl.musicasIds.includes(m.id));
+                },
+
+                get musicaAtual() {
+                    return this.listaAtual[this.musicaAtualIdx] || null;
+                },
+
+                // Lógica de Controle do Player
+                carregarMusica() {
+                    if (this.musicaAtual) {
+                        const tocandoAgora = this.isPlaying;
+                        this.audio.src = this.musicaAtual.url;
+                        this.audio.load();
+                        if (tocandoAgora) this.audio.play().catch(() => this.isPlaying = false);
+                    }
+                },
+
+                togglePlay() {
+                    if (!this.musicaAtual) return;
+                    
+                    // Inicializa a API de Áudio no primeiro clique de Play
+                    this.setupAudioContext();
+                    
+                    if (this.isPlaying) {
+                        this.audio.pause();
+                        this.isPlaying = false;
+                    } else {
+                        // Garante que o contexto de áudio não esteja suspenso
+                        if (this.audioContext && this.audioContext.state === 'suspended') {
+                            this.audioContext.resume();
+                        }
+                        this.audio.play().then(() => { 
+                            this.isPlaying = true; 
+                            this.renderEqualizer(); // Ativa o loop do gráfico real
+                        }).catch(() => {});
+                    }
+                },
+
+                tocarMusicaDireto(musicaId, playlistId = null) {
+                    this.playlistAtiva = playlistId;
+                    const index = this.listaAtual.findIndex(m => m.id === musicaId);
+                    if (index !== -1) {
+                        this.musicaAtualIdx = index;
+                        this.isPlaying = true;
+                        this.setupAudioContext();
+                        this.carregarMusica();
+                        if (this.audioContext && this.audioContext.state === 'suspended') {
+                            this.audioContext.resume();
+                        }
+                        this.audio.play().then(() => { this.renderEqualizer(); }).catch(() => {});
+                        this.tabAtual = 'player';
+                    }
+                },
+
+                proximaMusica(automatica = false) {
+                    if (this.listaAtual.length === 0) return;
+                    if (automatica && this.isLoop) {
+                        this.audio.currentTime = 0;
+                        this.audio.play().catch(() => {});
+                        return;
+                    }
+                    if (this.isShuffle && this.listaAtual.length > 1) {
+                        let novoIdx;
+                        do { novoIdx = Math.floor(Math.random() * this.listaAtual.length); } while (novoIdx === this.musicaAtualIdx);
+                        this.musicaAtualIdx = novoIdx;
+                    } else {
+                        this.musicaAtualIdx = (this.musicaAtualIdx + 1) % this.listaAtual.length;
+                    }
+                    this.carregarMusica();
+                    if (this.isPlaying) this.audio.play().catch(() => {});
+                },
+
+                musicaAnterior() {
+                    if (this.listaAtual.length === 0) return;
+                    this.musicaAtualIdx = (this.musicaAtualIdx - 1 + this.listaAtual.length) % this.listaAtual.length;
+                    this.carregarMusica();
+                    if (this.isPlaying) this.audio.play().catch(() => {});
+                },
+
+                avancarProgresso(e) {
+                    if (!this.duration) return;
+                    const barra = e.currentTarget;
+                    this.audio.currentTime = (e.offsetX / barra.offsetWidth) * this.duration;
+                },
+
+                ajustarVolume() { this.audio.volume = this.volume; this.isMuted = this.volume === 0; },
+                toggleMute() { this.isMuted = !this.isMuted; this.audio.muted = this.isMuted; },
+
+                // Gerenciador de Playlists
+                criarPlaylist() {
+                    if (!this.novaPlaylistNome.trim()) return;
+                    this.playlists.push({ id: Date.now().toString(), nome: this.novaPlaylistNome.trim(), icon: 'fa-music', musicasIds: [] });
+                    this.novaPlaylistNome = '';
+                    this.salvarNoNavegador();
+                },
+
+                removerPlaylist(id) {
+                    this.playlists = this.playlists.filter(p => p.id !== id);
+                    if (this.playlistAtiva === id) this.playlistAtiva = null;
+                    this.salvarNoNavegador();
+                },
+
+                toggleMusicaNaPlaylist(playlistId, musicaId) {
+                    const pl = this.playlists.find(p => p.id === playlistId);
+                    if (pl) {
+                        const idx = pl.musicasIds.indexOf(musicaId);
+                        if (idx === -1) pl.musicasIds.push(musicaId);
+                        else pl.musicasIds.splice(idx, 1);
+                        this.salvarNoNavegador();
+                    }
+                },
+
+                isMusicaNaPlaylist(playlistId, musicaId) {
+                    const pl = this.playlists.find(p => p.id === playlistId);
+                    return pl ? pl.musicasIds.includes(musicaId) : false;
+                },
+
+                salvarNoNavegador() { localStorage.setItem('audiox-folder-playlists', JSON.stringify(this.playlists)); },
+                formatarTempo(segundos) {
+                    if (isNaN(segundos)) return "0:00";
+                    const mins = Math.floor(segundos / 60);
+                    const segs = Math.floor(segundos % 60);
+                    return `${mins}:${segs < 10 ? '0' : ''}${segs}`;
+                }
             }
         }
     </script>
+</head>
+<body class="flex justify-center min-h-screen p-4 select-none">
+
+    <div x-data="app()" x-init="iniciar()" x-cloak class="w-full max-w-md space-y-4 pb-24 relative flex flex-col justify-between">
+        
+        <div class="text-center py-2 border-b border-gray-800 flex justify-between items-center">
+            <h1 class="text-lg font-black text-white tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-waveform-lines text-blue-500"></i> AudioX PC v2.0
+            </h1>
+            <button @click="selecionarPasta()" class="text-[10px] bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-lg border border-blue-500/30 transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-folder-plus"></i> Abrir Pasta
+            </button>
+        </div>
+
+        <div x-show="tabAtual === 'player'" class="space-y-6 flex-1 flex flex-col justify-center py-4">
+            
+            <div class="flex justify-center my-6">
+                <div class="w-64 h-48 bg-slate-900/40 border border-slate-800/80 rounded-2xl flex items-end justify-center gap-3 p-6 shadow-inner relative overflow-hidden group">
+                    
+                    <div :class="isPlaying ? 'opacity-20' : 'opacity-0'" class="absolute inset-0 bg-blue-500 blur-3xl transition-opacity duration-500 pointer-events-none"></div>
+                    
+                    <div :style="`height: ${barHeights[0]}%`" :class="isPlaying ? 'bg-blue-500 shadow-[0_0_12px_#3b82f6]' : 'bg-slate-700'" class="w-3 rounded-full transition-all duration-75"></div>
+                    <div :style="`height: ${barHeights[1]}%`" :class="isPlaying ? 'bg-blue-400 shadow-[0_0_12px_#60a5fa]' : 'bg-slate-700'" class="w-3 rounded-full transition-all duration-75"></div>
+                    <div :style="`height: ${barHeights[2]}%`" :class="isPlaying ? 'bg-cyan-400 shadow-[0_0_12px_#22d3ee]' : 'bg-slate-700'" class="w-3 rounded-full transition-all duration-75"></div>
+                    <div :style="`height: ${barHeights[3]}%`" :class="isPlaying ? 'bg-emerald-400 shadow-[0_0_12px_#34d399]' : 'bg-slate-700'" class="w-3 rounded-full transition-all duration-75"></div>
+                    <div :style="`height: ${barHeights[4]}%`" :class="isPlaying ? 'bg-cyan-400 shadow-[0_0_12px_#22d3ee]' : 'bg-slate-700'" class="w-3 rounded-full transition-all duration-75"></div>
+                    <div :style="`height: ${barHeights[5]}%`" :class="isPlaying ? 'bg-blue-400 shadow-[0_0_12px_#60a5fa]' : 'bg-slate-700'" class="w-3 rounded-full transition-all duration-75"></div>
+                    <div :style="`height: ${barHeights[6]}%`" :class="isPlaying ? 'bg-blue-500 shadow-[0_0_12px_#3b82f6]' : 'bg-slate-700'" class="w-3 rounded-full transition-all duration-75"></div>
+                </div>
+            </div>
+
+            <div class="text-center space-y-1">
+                <h2 class="text-lg font-black text-white tracking-wide truncate px-4" x-text="musicaAtual ? musicaAtual.titulo : 'Nenhuma pasta aberta'"></h2>
+                <p class="text-xs text-blue-400 font-medium truncate" x-text="musicaAtual ? musicaAtual.album : 'Clique em Abrir Pasta acima'"></p>
+            </div>
+
+            <div class="space-y-1 px-2">
+                <div @click="avancarProgresso($event)" class="w-full h-1.5 bg-gray-800 rounded-full cursor-pointer relative overflow-hidden group">
+                    <div class="h-full bg-blue-500 rounded-full transition-all duration-100" :style="`width: ${duration ? (currentTime / duration) * 100 : 0}%`"></div>
+                </div>
+                <div class="flex justify-between text-[10px] font-mono text-gray-500">
+                    <span x-text="formatarTempo(currentTime)">0:00</span>
+                    <span x-text="formatarTempo(duration)">0:00</span>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-center gap-6">
+                <button @click="isShuffle = !isShuffle" :class="isShuffle ? 'text-blue-400 drop-shadow-[0_0_5px_#3b82f6]' : 'text-gray-500 hover:text-white'" class="transition text-sm">
+                    <i class="fa-solid fa-shuffle"></i>
+                </button>
+                <button @click="musicaAnterior()" class="text-gray-400 hover:text-white transition text-xl active:scale-95"><i class="fa-solid fa-backward-step"></i></button>
+                <button @click="togglePlay()" class="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center text-2xl hover:bg-blue-500 transition active:scale-95 shadow-lg shadow-blue-600/20">
+                    <i class="fa-solid" :class="isPlaying ? 'fa-pause' : 'fa-play pl-1'"></i>
+                </button>
+                <button @click="proximaMusica()" class="text-gray-400 hover:text-white transition text-xl active:scale-95"><i class="fa-solid fa-forward-step"></i></button>
+                <button @click="isLoop = !isLoop" :class="isLoop ? 'text-blue-400 drop-shadow-[0_0_5px_#3b82f6]' : 'text-gray-500 hover:text-white'" class="transition text-sm">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+
+            <div class="flex items-center gap-3 px-6 bg-gray-900/40 p-3 rounded-xl border border-gray-800/60">
+                <button @click="toggleMute()" class="text-gray-500 hover:text-white transition w-5">
+                    <i class="fa-solid" :class="isMuted ? 'fa-volume-xmark text-red-400' : (volume > 0.5 ? 'fa-volume-high' : 'fa-volume-low')"></i>
+                </button>
+                <input type="range" min="0" max="1" step="0.05" x-model="volume" @input="ajustarVolume()" class="flex-1 h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
+            </div>
+        </div>
+
+        <div x-show="tabAtual === 'playlists'" class="space-y-4 flex-1">
+            <div class="bg-gray-900 p-3 rounded-xl border border-gray-800 flex gap-2">
+                <input x-model="novaPlaylistNome" @keydown.enter="criarPlaylist()" type="text" placeholder="Nome da nova playlist..." class="flex-1 bg-gray-950 text-white px-3 py-2 rounded-lg border border-gray-800 focus:border-blue-500 outline-none text-xs font-bold placeholder-gray-600">
+                <button @click="criarPlaylist()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 rounded-lg text-xs font-bold transition">Criar</button>
+            </div>
+
+            <div class="space-y-2 max-h-[400px] overflow-y-auto custom-scroll pr-1">
+                <div @click="playlistAtiva = null; tabAtual = 'player'" :class="playlistAtiva === null ? 'border-blue-500/50 bg-blue-500/5' : 'border-gray-800'" class="p-3 bg-gray-900 rounded-xl border flex justify-between items-center cursor-pointer hover:border-gray-700 transition">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-blue-500/10 text-blue-400 rounded-lg flex items-center justify-center text-xs"><i class="fa-solid fa-list-music"></i></div>
+                        <div>
+                            <h4 class="text-xs font-bold text-white">Todas as Músicas Escaneadas</h4>
+                            <p class="text-[10px] text-gray-500 font-mono" x-text="biblioteca.length + ' faixas encontradas'"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <template x-for="p in playlists" :key="p.id">
+                    <div @click="playlistAtiva = p.id; tabAtual = 'player'" :class="playlistAtiva === p.id ? 'border-blue-500/50 bg-blue-500/5' : 'border-gray-800'" class="p-3 bg-gray-900 rounded-xl border flex justify-between items-center cursor-pointer hover:border-gray-700 transition relative group">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-purple-500/10 text-purple-400 rounded-lg flex items-center justify-center text-xs"><i class="fa-solid" :class="p.icon"></i></div>
+                            <div>
+                                <h4 class="text-xs font-bold text-white" x-text="p.nome"></h4>
+                                <p class="text-[10px] text-gray-500 font-mono" x-text="p.musicasIds.length + ' faixas vinculadas'"></p>
+                            </div>
+                        </div>
+                        <button x-show="p.id !== 'fav'" @click.stop="removerPlaylist(p.id)" class="text-gray-600 hover:text-red-400 p-1 text-xs transition">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <div x-show="tabAtual === 'biblioteca'" class="space-y-4 flex-1">
+            <h3 class="text-xs uppercase font-bold text-gray-500 pl-1">Organizar Faixas da sua Pasta</h3>
+            
+            <div x-show="biblioteca.length === 0" class="text-center py-12 text-gray-600 italic text-sm">
+                <i class="fa-solid fa-folder-closed text-2xl mb-2 block"></i>
+                Nenhuma música importada. Selecione uma pasta no topo do app.
+            </div>
+
+            <div class="space-y-2 max-h-[420px] overflow-y-auto custom-scroll pr-1">
+                <template x-for="m in biblioteca" :key="m.id">
+                    <div class="bg-gray-900 p-2.5 rounded-xl border border-gray-800/60 flex items-center justify-between gap-3">
+                        <div @click="tocarMusicaDireto(m.id)" class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer group">
+                            <div class="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-xs text-blue-400 group-hover:bg-blue-600/20"><i class="fa-solid fa-music"></i></div>
+                            <div class="min-w-0">
+                                <h4 class="text-xs font-bold text-white truncate group-hover:text-blue-400 transition" x-text="m.titulo"></h4>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-1.5">
+                            <template x-for="p in playlists" :key="p.id">
+                                <button @click="toggleMusicaNaPlaylist(p.id, m.id)" 
+                                        :title="'Adicionar a ' + p.nome"
+                                        :class="isMusicaNaPlaylist(p.id, m.id) ? 'bg-blue-600/20 text-blue-400 border-blue-500/40' : 'bg-gray-950 text-gray-600 border-gray-800'"
+                                        class="w-6 h-6 rounded border text-[10px] flex items-center justify-center transition active:scale-90">
+                                    <i class="fa-solid" :class="p.id === 'fav' ? 'fa-heart' : 'fa-plus'"></i>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <div class="fixed bottom-0 left-0 right-0 p-3 bg-gray-950/80 backdrop-blur-md border-t border-gray-900 flex justify-center z-40">
+            <div class="w-full max-w-md flex bg-gray-900 p-1 rounded-xl border border-gray-800">
+                <button @click="tabAtual = 'player'" :class="tabAtual === 'player' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-white'" class="flex-1 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-compact-disc"></i> Player
+                </button>
+                <button @click="tabAtual = 'playlists'" :class="tabAtual === 'playlists' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-white'" class="flex-1 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-folder-music"></i> Playlists
+                </button>
+                <button @click="tabAtual = 'biblioteca'" :class="tabAtual === 'biblioteca' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-white'" class="flex-1 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-sliders"></i> Organizar
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </body>
 </html>
