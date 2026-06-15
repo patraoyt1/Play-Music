@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Downloader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-700">
+        <h1 class="text-2xl font-bold mb-6 text-center text-blue-400">Audio Downloader</h1>
+        
+        <input type="text" id="urlInput" placeholder="Cole a URL do vídeo aqui..." 
+               class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg mb-4 outline-none focus:border-blue-500">
+        
+        <button id="btnDownload" onclick="baixarAudio()"
+                class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-lg font-bold transition">
+            Baixar MP3
+        </button>
+
+        <div id="status" class="mt-4 text-sm text-center font-medium"></div>
+    </div>
+
+    <script>
+        async function baixarAudio() {
+            const url = document.getElementById('urlInput').value;
+            const status = document.getElementById('status');
+            const btn = document.getElementById('btnDownload');
+
+            if (!url) {
+                status.innerText = "Por favor, insira uma URL.";
+                return;
+            }
+
+            status.innerText = "Processando... aguarde.";
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+
+                if (!response.ok) throw new Error("Erro ao baixar o vídeo");
+
+                // Captura o nome original do arquivo via cabeçalho
+                const disposition = response.headers.get('Content-Disposition');
+                let filename = "audio.mp3"; 
+
+                if (disposition && disposition.includes('filename*=UTF-8')) {
+                    const encodedName = disposition.split("filename*=UTF-8''")[1];
+                    filename = decodeURIComponent(encodedName);
+                }
+
+                // Cria o blob e dispara o download
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = filename; 
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                
+                status.innerText = "Download concluído!";
+            } catch (error) {
+                status.innerText = "Erro: " + error.message;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
