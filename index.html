@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AudioX Folder Player v2.2</title>
+    <title>AudioX Folder Player v2.3</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -37,7 +37,7 @@
                 isMuted: false,
                 isShuffle: false,
                 isLoop: false,
-                dispositivoAtual: 'Saída Padrão do Sistema', // Novo Estado
+                dispositivoAtual: 'Saída Padrão do Sistema', 
                 
                 // Smart Shuffle (Fila e Histórico)
                 filaShuffle: [],
@@ -58,7 +58,6 @@
                     this.audio.crossOrigin = "anonymous"; 
                     this.audio.volume = this.volume;
 
-                    // Recupera playlists do LocalStorage
                     const salvas = localStorage.getItem('audiox-folder-playlists');
                     if (salvas) {
                         this.playlists = JSON.parse(salvas);
@@ -67,11 +66,71 @@
                         this.salvarNoNavegador();
                     }
 
+                    // Configura a integração com o Sistema Operacional (Notificações)
+                    this.setupMediaSession();
+
                     // Ouvintes de Eventos do Áudio
                     this.audio.addEventListener('timeupdate', () => { this.currentTime = this.audio.currentTime; });
-                    this.audio.addEventListener('loadedmetadata', () => { this.duration = this.audio.duration; });
+                    
+                    this.audio.addEventListener('loadedmetadata', () => { 
+                        this.duration = this.audio.duration; 
+                        this.updatePositionState(); // Sincroniza relógio do OS
+                    });
+                    
                     this.audio.addEventListener('ended', () => { this.proximaMusica(true); });
+
+                    // Mantém o relógio do sistema operacional perfeitamente sincronizado com o player
+                    this.audio.addEventListener('play', () => this.updatePositionState());
+                    this.audio.addEventListener('pause', () => this.updatePositionState());
+                    this.audio.addEventListener('seeked', () => this.updatePositionState());
                 },
+
+                // --- INTEGRAÇÃO COM NOTIFICAÇÕES (MEDIA SESSION API) ---
+                setupMediaSession() {
+                    if ('mediaSession' in navigator) {
+                        navigator.mediaSession.setActionHandler('play', () => this.togglePlay());
+                        navigator.mediaSession.setActionHandler('pause', () => this.togglePlay());
+                        navigator.mediaSession.setActionHandler('previoustrack', () => this.musicaAnterior());
+                        navigator.mediaSession.setActionHandler('nexttrack', () => this.proximaMusica());
+                        navigator.mediaSession.setActionHandler('seekto', (details) => {
+                            if (details.fastSeek && 'fastSeek' in this.audio) {
+                                this.audio.fastSeek(details.seekTime);
+                            } else {
+                                this.audio.currentTime = details.seekTime;
+                            }
+                            this.updatePositionState();
+                        });
+                    }
+                },
+
+                updateMediaMetadata() {
+                    if ('mediaSession' in navigator && this.musicaAtual) {
+                        navigator.mediaSession.metadata = new MediaMetadata({
+                            title: this.musicaAtual.titulo,
+                            artist: this.musicaAtual.artista || 'AudioX Local Player',
+                            album: this.musicaAtual.album || 'Sua Biblioteca'
+                        });
+                    }
+                },
+
+                updatePositionState() {
+                    if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
+                        // Evita quebrar se a música ainda não carregou o tempo total
+                        if (isNaN(this.audio.duration) || !isFinite(this.audio.duration)) return;
+                        
+                        try {
+                            navigator.mediaSession.setPositionState({
+                                duration: this.audio.duration,
+                                playbackRate: this.audio.playbackRate || 1,
+                                position: this.audio.currentTime
+                            });
+                        } catch(e) {
+                            console.warn("Aviso: Sincronização de tempo falhou", e);
+                        }
+                    }
+                },
+
+                // --- FIM: INTEGRAÇÃO MEDIA SESSION ---
 
                 setupAudioContext() {
                     if (!this.audioContext) {
@@ -134,7 +193,6 @@
                         }
 
                         if (this.biblioteca.length > 0) {
-                            // Verifica se existe uma última música tocada salva
                             const ultimaTocada = localStorage.getItem('audiox-ultima-musica');
                             let indexParaTocar = 0;
                             
@@ -146,7 +204,7 @@
                             }
                             
                             this.musicaAtualIdx = indexParaTocar;
-                            this.filaShuffle = []; // Reseta a fila ao carregar nova pasta
+                            this.filaShuffle = []; 
                             this.historicoMusicas = [];
                             this.carregarMusica();
                         } else {
@@ -161,29 +219,24 @@
                 // --- TROCAR SAÍDA DE ÁUDIO ---
                 async trocarSaidaAudio() {
                     if (!navigator.mediaDevices || !navigator.mediaDevices.selectAudioOutput) {
-                        alert("Seu navegador não suporta a troca de dispositivo de saída de áudio nativamente (Recomendado: Chrome ou Edge atualizados).");
+                        alert("Seu navegador não suporta a troca de dispositivo nativamente neste contexto.");
                         return;
                     }
 
                     try {
-                        // Abre o pop-up nativo do navegador para o usuário escolher o dispositivo Bluetooth/Monitor/Caixa de Som
                         const device = await navigator.mediaDevices.selectAudioOutput();
                         
-                        // Atualiza no elemento de áudio básico
                         if (typeof this.audio.setSinkId === 'function') {
                             await this.audio.setSinkId(device.deviceId);
                         }
-                        
-                        // Atualiza na Web Audio API (o motor do nosso equalizador visual)
                         if (this.audioContext && typeof this.audioContext.setSinkId === 'function') {
                             await this.audioContext.setSinkId(device.deviceId);
                         }
 
-                        // Se o dispositivo tiver nome vazio, chamamos de 'Dispositivo Personalizado'
                         this.dispositivoAtual = device.label || 'Dispositivo Selecionado';
                         
                     } catch (err) {
-                        console.error("Seleção de dispositivo de áudio cancelada ou falhou:", err);
+                        console.error("Seleção de dispositivo falhou:", err);
                     }
                 },
 
@@ -208,13 +261,18 @@
                 // --- CONTROLES DE ÁUDIO ---
                 carregarMusica() {
                     if (this.musicaAtual) {
-                        // Salva a música atual no LocalStorage
                         localStorage.setItem('audiox-ultima-musica', this.musicaAtual.titulo);
 
                         const tocandoAgora = this.isPlaying;
                         this.audio.src = this.musicaAtual.url;
+                        
+                        // Atualiza o nome da música nas notificações!
+                        this.updateMediaMetadata();
+
                         this.audio.load();
-                        if (tocandoAgora) this.audio.play().catch(() => this.isPlaying = false);
+                        if (tocandoAgora) {
+                            this.audio.play().catch(() => this.isPlaying = false);
+                        }
                     }
                 },
 
@@ -258,15 +316,12 @@
                 // --- SMART SHUFFLE E NAVEGAÇÃO ---
                 alternarShuffle() {
                     this.isShuffle = !this.isShuffle;
-                    if (this.isShuffle) {
-                        this.filaShuffle = []; 
-                    }
+                    if (this.isShuffle) this.filaShuffle = []; 
                 },
 
                 gerarFilaShuffle() {
                     let indices = this.listaAtual.map((_, i) => i);
                     indices = indices.filter(i => i !== this.musicaAtualIdx);
-                    // Fisher-Yates Shuffle
                     for (let i = indices.length - 1; i > 0; i--) {
                         const j = Math.floor(Math.random() * (i + 1));
                         [indices[i], indices[j]] = [indices[j], indices[i]];
@@ -318,7 +373,11 @@
                 avancarProgresso(e) {
                     if (!this.duration) return;
                     const barra = e.currentTarget;
-                    this.audio.currentTime = (e.offsetX / barra.offsetWidth) * this.duration;
+                    const novoTempo = (e.offsetX / barra.offsetWidth) * this.duration;
+                    this.audio.currentTime = novoTempo;
+                    
+                    // Força a atualização do relógio da notificação quando clicamos na barra!
+                    this.updatePositionState(); 
                 },
 
                 ajustarVolume() { this.audio.volume = this.volume; this.isMuted = this.volume === 0; },
@@ -371,7 +430,7 @@
         
         <div class="text-center py-2 border-b border-gray-800 flex justify-between items-center">
             <h1 class="text-lg font-black text-white tracking-wider flex items-center gap-2">
-                <i class="fa-solid fa-waveform-lines text-blue-500"></i> AudioX v2.2
+                <i class="fa-solid fa-waveform-lines text-blue-500"></i> AudioX v2.3
             </h1>
             <button @click="selecionarPasta()" class="text-[10px] bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-lg border border-blue-500/30 transition flex items-center gap-1.5 shadow-md">
                 <i class="fa-solid fa-folder-plus"></i> Abrir Pasta
