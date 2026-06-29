@@ -3,7 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AudioX Folder Player v2.3</title>
+    <title>AudioX Folder Player v2.4</title>
+    
+    <meta name="theme-color" content="#0f172a">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -219,7 +225,7 @@
                 // --- TROCAR SAÍDA DE ÁUDIO ---
                 async trocarSaidaAudio() {
                     if (!navigator.mediaDevices || !navigator.mediaDevices.selectAudioOutput) {
-                        alert("Seu navegador não suporta a troca de dispositivo nativamente neste contexto.");
+                        alert("O seu navegador não suporta a troca de dispositivo nativamente neste contexto.");
                         return;
                     }
 
@@ -430,7 +436,7 @@
         
         <div class="text-center py-2 border-b border-gray-800 flex justify-between items-center">
             <h1 class="text-lg font-black text-white tracking-wider flex items-center gap-2">
-                <i class="fa-solid fa-waveform-lines text-blue-500"></i> AudioX v2.3
+                <i class="fa-solid fa-waveform-lines text-blue-500"></i> AudioX v2.4
             </h1>
             <button @click="selecionarPasta()" class="text-[10px] bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-lg border border-blue-500/30 transition flex items-center gap-1.5 shadow-md">
                 <i class="fa-solid fa-folder-plus"></i> Abrir Pasta
@@ -590,6 +596,15 @@
 
     </div>
 
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registado com sucesso!', reg))
+                    .catch(err => console.error('Erro ao registar Service Worker', err));
+            });
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </body>
 </html>
